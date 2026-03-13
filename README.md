@@ -1,5 +1,7 @@
 # tmux-line-numbers
 
+> Display line numbers in tmux when in `copy-mode`.
+
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/lint.yml?style=flat-square&label=shellcheck)](https://github.com/JosephLai241/tmux-line-numbers/actions/workflows/lint.yml)
 
 > [!IMPORTANT]
@@ -8,39 +10,20 @@
 
 ![tmux-line-numbers](https://github.com/user-attachments/assets/cd5bb4ee-c081-485a-89bb-83683cbeb25b)
 
-Display line numbers in tmux when in `copy-mode`. Like vim's `relativenumber`, a narrow pane appears on the left showing how many lines away each line is from your cursor so you can instantly see that you need `5k`, `12j`, etc. to get where you want.
+# Table of Contents
 
-The cursor line shows its absolute line number in the buffer, while all other lines show their relative distance.
+- [Introduction](#introduction)
+- [Installing with TPM](#installing-with-tpm)
+- [Configuration](#configuration)
+- [How It Works](#how-it-works)
+  - [Scripts](#scripts)
+  - [Flow](#flow)
 
-```
-  5 │
-  4 │
-  3 │
-  2 │
-  1 │
-188 │  <- cursor is here (absolute line number)
-  1 │
-  2 │
-  3 │
-  4 │
-  5 │
-```
+# Introduction
 
-When relative numbers are turned off, all lines show their absolute line number instead:
+Like vim's `relativenumber`, a narrow pane appears on the left showing how many lines away each line is from your cursor so you can instantly see that you need `5k`, `12j`, etc. to get where you want.
 
-```
-183 │
-184 │
-185 │
-186 │
-187 │
-188 │  <- cursor is here (highlighted)
-189 │
-190 │
-191 │
-192 │
-193 │
-```
+The cursor line shows its absolute line number in the buffer, while all other lines show their relative distance. When relative numbers are turned off, all lines show their absolute line number instead.
 
 # Installing with [TPM](https://github.com/tmux-plugins/tpm)
 
