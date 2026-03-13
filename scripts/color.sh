@@ -58,6 +58,11 @@ tmux_color_to_ansi() {
         # Hex RGB: (#rrggbb).
         \#*)
             local hex="${color#\#}"
+            # Validate hex format (must be exactly 6 hex digits).
+            if [ ${#hex} -ne 6 ] || ! [[ "$hex" =~ ^[0-9a-fA-F]{6}$ ]]; then
+                printf '\e[%dm' "$((base + 9))"
+                return
+            fi
             local r=$((16#${hex:0:2}))
             local g=$((16#${hex:2:2}))
             local b=$((16#${hex:4:2}))
