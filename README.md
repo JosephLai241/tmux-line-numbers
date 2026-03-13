@@ -4,7 +4,9 @@
 
 > [!IMPORTANT]
 >
-> Requires tmux 3.2+ (uses `pane-mode-changed` hook and `copy_cursor_y` format).
+> **Requires tmux 3.2+ (uses `pane-mode-changed` hook and `copy_cursor_y` format).**
+
+![tmux-line-numbers](https://github.com/user-attachments/assets/cd5bb4ee-c081-485a-89bb-83683cbeb25b)
 
 Display line numbers in tmux when in `copy-mode`. Like vim's `relativenumber`, a narrow pane appears on the left showing how many lines away each line is from your cursor so you can instantly see that you need `5k`, `12j`, etc. to get where you want.
 
