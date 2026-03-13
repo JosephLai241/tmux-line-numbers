@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Called by the pane-mode-changed hook.
 
-PANE_ID="$1"
 # This value is `1` if tmux is in a mode, `0` if not.
 IN_MODE="$2"
+# The pane that triggered the mode change.
+PANE_ID="$1"
+# The absolute path to the scripts directory.
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Marker used to find the line-number pane.
@@ -32,11 +34,53 @@ if [ "$IN_MODE" = "1" ]; then
     # Add 1 column of padding.
     LN_WIDTH=$((DIGITS + 1))
 
-    # Split a narrow pane to the left of the current pane. The line-number pane
-    # runs the render script in a loop.
-    LN_PANE=$(tmux split-window -t "$PANE_ID" -hbdl "$LN_WIDTH" -PF '#{pane_id}' \
+    # Load theme settings.
+    CUR_BG=$(tmux show-option -gqv @line-numbers-current-line-bg 2>/dev/null)
+    CUR_BOLD=$(tmux show-option -gqv @line-numbers-current-line-bold 2>/dev/null)
+    if [ "$CUR_BOLD" != "off" ]; then
+        CUR_BOLD="on"
+    fi
+    CUR_FG=$(tmux show-option -gqv @line-numbers-current-line-fg 2>/dev/null)
+    LN_BG=$(tmux show-option -gqv @line-numbers-bg 2>/dev/null)
+    LN_FG=$(tmux show-option -gqv @line-numbers-fg 2>/dev/null)
+
+	# Load the minimum pane width limit setting.
+    MIN_WIDTH=$(tmux show-option -gqv @line-numbers-min-pane-width 2>/dev/null)
+    MIN_WIDTH="${MIN_WIDTH:-40}"
+
+	# Load the poll interval setting.
+    POLL_INTERVAL=$(tmux show-option -gqv @line-numbers-poll-interval 2>/dev/null)
+
+	# Load the number column position setting.
+    POSITION=$(tmux show-option -gqv @line-numbers-position 2>/dev/null)
+    if [ "$POSITION" != "right" ]; then
+        POSITION="left"
+    fi
+
+	# Load the relative or absolute line number setting.
+    RELATIVE=$(tmux show-option -gqv @line-numbers-relative 2>/dev/null)
+    if [ "$RELATIVE" != "off" ]; then
+        RELATIVE="on"
+    fi
+
+    # Do not activate this plugin if the current pane is too narrow.
+    PANE_WIDTH=$(tmux display -p -t "$PANE_ID" '#{pane_width}')
+    if [ "$PANE_WIDTH" -lt "$MIN_WIDTH" ]; then
+        exit 0
+    fi
+
+    # Build split-window flags. Add the -b (before) flag if rendering the numbers
+	# on the left, otherwise omit it if rendering them on the right.
+    SPLIT_FLAGS="-hdl $LN_WIDTH"
+    if [ "$POSITION" = "left" ]; then
+        SPLIT_FLAGS="-hbdl $LN_WIDTH"
+    fi
+
+    # Split a pane for line numbers. Each argument is single-quoted to protect
+    # special characters like "#" in hex colors.
+    LN_PANE=$(tmux split-window -t "$PANE_ID" $SPLIT_FLAGS -PF '#{pane_id}' \
         -e "$MARKER=$PANE_ID" \
-        "$SCRIPTS_DIR/render-loop.sh $PANE_ID $DIGITS")
+        "'$SCRIPTS_DIR/render-loop.sh' '$PANE_ID' '$CUR_BG' '$CUR_BOLD' '$CUR_FG' '$DIGITS' '$LN_BG' '$LN_FG' '$POLL_INTERVAL' '$RELATIVE'")
 
     if [ -z "$LN_PANE" ]; then
         exit 1
