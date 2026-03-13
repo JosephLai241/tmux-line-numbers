@@ -1,5 +1,7 @@
 # tmux-line-numbers
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/lint.yml?style=flat-square&label=shellcheck)
+
 > [!IMPORTANT]
 >
 > Requires tmux 3.2+ (uses `pane-mode-changed` hook and `copy_cursor_y` format).
