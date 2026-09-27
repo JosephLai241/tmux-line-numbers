@@ -123,11 +123,26 @@ assert_isolated() {
     exit 1
 }
 
-# Kills the test server, but only once it is confirmed to be the test server.
+# True while a server is answering on the current socket.
+server_alive() {
+    tmux list-sessions > /dev/null 2>&1
+}
+
+# Kills the test server, but only once it is confirmed to be the test server, and waits
+# for it to actually go. kill-server returns before the socket is unlinked, so starting
+# the next session immediately connects to a dying server: that client reports "server
+# exited unexpectedly" and every query after it comes back empty.
 stop_server() {
-    tmux has-session 2> /dev/null || return 0
+    server_alive || return 0
     assert_isolated
     tmux kill-server 2> /dev/null
+    local i
+    for ((i = 0; i < 100; i++)); do
+        server_alive || return 0
+        sleep 0.1
+    done
+    printf '  WARN server did not shut down\n' >&2
+    return 1
 }
 
 # Runs on exit, including the abort path, so it checks quietly instead of asserting.
@@ -157,31 +172,49 @@ SCROLLBACK_LINES=300
 # from an almost empty history while the assertions below measure a full one, and every
 # digit-width check disagrees by one.
 wait_for_history() {
-    local height target i
-    height=$(tmux display -p '#{pane_height}')
+    local height target size i
+    height=$(tmux display -p '#{pane_height}' 2> /dev/null)
+    [ -n "$height" ] || return 1
     # history_size counts only the lines that scrolled off, and the last screenful of
     # output is still visible, so it settles just short of SCROLLBACK_LINES.
     target=$((SCROLLBACK_LINES - height))
     for ((i = 0; i < 100; i++)); do
-        if [ "$(tmux display -p '#{history_size}')" -ge "$target" ]; then
+        size=$(tmux display -p '#{history_size}' 2> /dev/null)
+        [ -n "$size" ] || return 1
+        if [ "$size" -ge "$target" ]; then
             return 0
         fi
         sleep 0.1
     done
-    printf '  WARN scrollback stalled at %s, wanted %s\n' \
-        "$(tmux display -p '#{history_size}')" "$target" >&2
+    printf '  WARN scrollback stalled at %s, wanted %s\n' "$size" "$target" >&2
     return 1
 }
 
 # Starts a fresh single-pane session with scrollback and no user config.
 new_session() {
-    stop_server
-    # The pane's own command generates the scrollback. Sending it as keystrokes instead
-    # races the shell's startup: until the prompt exists the input is dropped, and the
-    # session then tests against an almost empty history.
-    tmux -f /dev/null new-session -d -x "${1:-80}" -y "${2:-24}" \
-        "seq 1 $SCROLLBACK_LINES; sleep 3600" || return 1
-    # Confirm isolation before anything touches this server.
+    local attempt
+    for attempt in 1 2 3; do
+        stop_server
+        # The pane's own command generates the scrollback. Sending it as keystrokes
+        # instead races the shell's startup: until the prompt exists the input is
+        # dropped, and the session then tests against an almost empty history.
+        if tmux -f /dev/null new-session -d -x "${1:-80}" -y "${2:-24}" \
+            "seq 1 $SCROLLBACK_LINES; sleep 3600" 2> /dev/null && server_alive; then
+            break
+        fi
+    done
+
+    # Every assertion below reads tmux through $(...), which yields an empty string when
+    # the server is gone. Several tests legitimately expect an empty value, so a dead
+    # server makes them compare "" against "" and report a pass while testing nothing.
+    # Refuse to keep going rather than emit false passes.
+    if ! server_alive || [ -z "$(target_pane)" ]; then
+        printf 'ABORT: test session would not start after %s attempts.\n' "$attempt" >&2
+        printf '       Continuing would compare empty strings and report false passes.\n' >&2
+        exit 1
+    fi
+
+    # Confirm isolation before anything else touches this server.
     assert_isolated
     # copy-mode freezes history_size, so waiting here makes every later assertion agree
     # with what the plugin saw when it sized the column.
