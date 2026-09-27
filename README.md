@@ -3,6 +3,7 @@
 > Display line numbers in tmux when in `copy-mode`.
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/lint.yml?style=flat-square&label=shellcheck)](https://github.com/JosephLai241/tmux-line-numbers/actions/workflows/lint.yml)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/test.yml?style=flat-square&label=tests)](https://github.com/JosephLai241/tmux-line-numbers/actions/workflows/test.yml)
 
 > [!IMPORTANT]
 >
@@ -52,6 +53,9 @@ set -g @line-numbers-current-line-bold on
 
 # Foreground color for the current line.
 set -g @line-numbers-current-line-fg yellow
+
+# Show the current line's number, or replace it with a solid bar (`on`, `off`).
+set -g @line-numbers-current-line-number on
 
 # Background color for other line numbers.
 set -g @line-numbers-bg default
