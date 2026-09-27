@@ -26,11 +26,8 @@ if [ "$IN_MODE" = "1" ]; then
 
     # Calculate width based on the largest possible line number (history + visible).
     MAX_LINE=$(tmux display -p -t "$PANE_ID" '#{e|+:#{history_size},#{pane_height}}')
-    # Number of digits needed, with a minimum of 3.
+    # Number of digits needed to render that line number.
     DIGITS=${#MAX_LINE}
-    if [ "$DIGITS" -lt 3 ]; then
-        DIGITS=3
-    fi
     # Add 1 column of padding.
     LN_WIDTH=$((DIGITS + 1))
 
@@ -41,6 +38,10 @@ if [ "$IN_MODE" = "1" ]; then
         CUR_BOLD="on"
     fi
     CUR_FG=$(tmux show-option -gqv @line-numbers-current-line-fg 2>/dev/null)
+    CUR_NUMBER=$(tmux show-option -gqv @line-numbers-current-line-number 2>/dev/null)
+    if [ "$CUR_NUMBER" != "off" ]; then
+        CUR_NUMBER="on"
+    fi
     LN_BG=$(tmux show-option -gqv @line-numbers-bg 2>/dev/null)
     LN_FG=$(tmux show-option -gqv @line-numbers-fg 2>/dev/null)
 
@@ -81,7 +82,7 @@ if [ "$IN_MODE" = "1" ]; then
     # shellcheck disable=SC2086 # Intentional word splitting on SPLIT_FLAGS.
     LN_PANE=$(tmux split-window -t "$PANE_ID" $SPLIT_FLAGS -PF '#{pane_id}' \
         -e "$MARKER=$PANE_ID" \
-        "'$SCRIPTS_DIR/render-loop.sh' '$PANE_ID' '$CUR_BG' '$CUR_BOLD' '$CUR_FG' '$DIGITS' '$LN_BG' '$LN_FG' '$POLL_INTERVAL' '$RELATIVE'")
+        "'$SCRIPTS_DIR/render-loop.sh' '$PANE_ID' '$CUR_BG' '$CUR_BOLD' '$CUR_FG' '$CUR_NUMBER' '$DIGITS' '$LN_BG' '$LN_FG' '$POLL_INTERVAL' '$RELATIVE'")
 
     if [ -z "$LN_PANE" ]; then
         exit 1

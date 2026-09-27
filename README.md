@@ -53,6 +53,9 @@ set -g @line-numbers-current-line-bold on
 # Foreground color for the current line.
 set -g @line-numbers-current-line-fg yellow
 
+# Show the current line's number, or replace it with a solid bar (`on`, `off`).
+set -g @line-numbers-current-line-number on
+
 # Background color for other line numbers.
 set -g @line-numbers-bg default
 

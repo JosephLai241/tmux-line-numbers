@@ -15,21 +15,29 @@ CUR_BG_CODE="$(tmux_color_to_ansi "${2:-default}" bg)"
 CUR_BOLD="${3:-on}"
 # Foreground ANSI code for the current line.
 CUR_FG_CODE="$(tmux_color_to_ansi "${4:-yellow}" fg)"
+# Whether to show the current line's number ("on") or a solid bar ("off").
+CUR_NUMBER="${5:-on}"
 # Number of digits to use for formatting. This is calculated at split time.
-DIGITS="${5:-3}"
+DIGITS="${6:-3}"
 # Printf format string for line numbers.
 FMT="%${DIGITS}d"
 # Background ANSI code for non-current line numbers.
-LN_BG_CODE="$(tmux_color_to_ansi "${6:-default}" bg)"
+LN_BG_CODE="$(tmux_color_to_ansi "${7:-default}" bg)"
 # Foreground ANSI code for non-current line numbers.
-LN_FG_CODE="$(tmux_color_to_ansi "${7:-colour243}" fg)"
+LN_FG_CODE="$(tmux_color_to_ansi "${8:-colour243}" fg)"
 # Seconds between cursor position polls.
-POLL_INTERVAL="${8:-0.1}"
+POLL_INTERVAL="${9:-0.1}"
 if ! [[ "$POLL_INTERVAL" =~ ^[0-9]*\.?[0-9]+$ ]]; then
     POLL_INTERVAL=0.1
 fi
 # Whether to show relative ("on") or absolute ("off") line numbers.
-RELATIVE="${9:-on}"
+RELATIVE="${10:-on}"
+
+# Pre-build a solid bar matching the digit width, used when CUR_NUMBER is off.
+BAR=""
+for ((i = 0; i < DIGITS; i++)); do
+    BAR+="█"
+done
 
 # Pre-build bold code.
 BOLD_CODE=""
@@ -66,7 +74,11 @@ render() {
         # shellcheck disable=SC2059 # Format strings contain pre-built ANSI codes.
         if [ $rel -eq 0 ]; then
             # Current line: bold with configured colors.
-            printf "${STYLE_CURRENT}${FMT}${STYLE_RESET}\e[K" "$abs_line"
+            if [ "$CUR_NUMBER" = "off" ]; then
+                printf "${STYLE_CURRENT}%s${STYLE_RESET}\e[K" "$BAR"
+            else
+                printf "${STYLE_CURRENT}${FMT}${STYLE_RESET}\e[K" "$abs_line"
+            fi
         elif [ "$RELATIVE" = "on" ]; then
             # Relative mode: distance from cursor.
             if [ $rel -lt 0 ]; then
