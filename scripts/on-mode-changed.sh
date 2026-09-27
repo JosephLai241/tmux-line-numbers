@@ -12,60 +12,59 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MARKER="TMUX_LINE_NUMBERS_FOR"
 
 if [ "$IN_MODE" = "1" ]; then
+    # Fetch pane geometry and every plugin option in a single tmux round-trip. One
+    # `tmux display` costs ~6ms, so asking 12 separate times spent ~70ms before the
+    # line-number pane could even be created. Fields are "|"-delimited: an unset
+    # option yields an empty field, and a non-whitespace IFS preserves empty fields
+    # instead of shifting every later value up. Order must match the `read` below.
+    FMT='#{pane_mode}|#{e|+:#{history_size},#{pane_height}}|#{pane_width}'
+    FMT="$FMT|#{@line-numbers-current-line-bg}|#{@line-numbers-current-line-bold}"
+    FMT="$FMT|#{@line-numbers-current-line-fg}|#{@line-numbers-current-line-number}"
+    FMT="$FMT|#{@line-numbers-bg}|#{@line-numbers-fg}"
+    FMT="$FMT|#{@line-numbers-min-pane-width}|#{@line-numbers-poll-interval}"
+    FMT="$FMT|#{@line-numbers-position}|#{@line-numbers-relative}"
+
+    IFS='|' read -r PANE_MODE MAX_LINE PANE_WIDTH CUR_BG CUR_BOLD CUR_FG CUR_NUMBER \
+        LN_BG LN_FG MIN_WIDTH POLL_INTERVAL POSITION RELATIVE \
+        <<< "$(tmux display -p -t "$PANE_ID" "$FMT" 2>/dev/null)"
+
     # Check this pane is actually in copy-mode (not command mode, etc.).
-    PANE_MODE=$(tmux display -p -t "$PANE_ID" '#{pane_mode}' 2>/dev/null)
     if [ "$PANE_MODE" != "copy-mode" ]; then
         exit 0
     fi
 
     # Don't create a second line-number pane if one already exists.
-    EXISTING=$(tmux list-panes -F '#{pane_id} #{pane_start_command}' 2>/dev/null | grep -F "$MARKER=$PANE_ID" | awk '{print $1}')
-    if [ -n "$EXISTING" ]; then
+    if tmux list-panes -F '#{pane_id} #{pane_start_command}' 2>/dev/null |
+        grep -qF "$MARKER=$PANE_ID"; then
         exit 0
     fi
 
-    # Calculate width based on the largest possible line number (history + visible).
-    MAX_LINE=$(tmux display -p -t "$PANE_ID" '#{e|+:#{history_size},#{pane_height}}')
-    # Number of digits needed to render that line number.
+    # Width is based on the largest possible line number (history + visible), so
+    # $MAX_LINE above already holds it. Count the digits needed to render it.
     DIGITS=${#MAX_LINE}
     # Add 1 column of padding.
     LN_WIDTH=$((DIGITS + 1))
 
-    # Load theme settings.
-    CUR_BG=$(tmux show-option -gqv @line-numbers-current-line-bg 2>/dev/null)
-    CUR_BOLD=$(tmux show-option -gqv @line-numbers-current-line-bold 2>/dev/null)
+    # Normalize the on/off settings. Anything other than "off" means "on".
     if [ "$CUR_BOLD" != "off" ]; then
         CUR_BOLD="on"
     fi
-    CUR_FG=$(tmux show-option -gqv @line-numbers-current-line-fg 2>/dev/null)
-    CUR_NUMBER=$(tmux show-option -gqv @line-numbers-current-line-number 2>/dev/null)
     if [ "$CUR_NUMBER" != "off" ]; then
         CUR_NUMBER="on"
     fi
-    LN_BG=$(tmux show-option -gqv @line-numbers-bg 2>/dev/null)
-    LN_FG=$(tmux show-option -gqv @line-numbers-fg 2>/dev/null)
-
-	# Load the minimum pane width limit setting.
-    MIN_WIDTH=$(tmux show-option -gqv @line-numbers-min-pane-width 2>/dev/null)
-    MIN_WIDTH="${MIN_WIDTH:-40}"
-
-	# Load the poll interval setting.
-    POLL_INTERVAL=$(tmux show-option -gqv @line-numbers-poll-interval 2>/dev/null)
-
-	# Load the number column position setting.
-    POSITION=$(tmux show-option -gqv @line-numbers-position 2>/dev/null)
-    if [ "$POSITION" != "right" ]; then
-        POSITION="left"
-    fi
-
-	# Load the relative or absolute line number setting.
-    RELATIVE=$(tmux show-option -gqv @line-numbers-relative 2>/dev/null)
     if [ "$RELATIVE" != "off" ]; then
         RELATIVE="on"
     fi
 
+    # The number column sits on the left unless explicitly placed right.
+    if [ "$POSITION" != "right" ]; then
+        POSITION="left"
+    fi
+
+    # Fall back to the default minimum pane width when the option is unset.
+    MIN_WIDTH="${MIN_WIDTH:-40}"
+
     # Do not activate this plugin if the current pane is too narrow.
-    PANE_WIDTH=$(tmux display -p -t "$PANE_ID" '#{pane_width}')
     if [ "$PANE_WIDTH" -lt "$MIN_WIDTH" ]; then
         exit 0
     fi
