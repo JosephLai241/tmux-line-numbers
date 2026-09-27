@@ -3,6 +3,7 @@
 > Display line numbers in tmux when in `copy-mode`.
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/lint.yml?style=flat-square&label=shellcheck)](https://github.com/JosephLai241/tmux-line-numbers/actions/workflows/lint.yml)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JosephLai241/tmux-line-numbers/test.yml?style=flat-square&label=tests)](https://github.com/JosephLai241/tmux-line-numbers/actions/workflows/test.yml)
 
 > [!IMPORTANT]
 >

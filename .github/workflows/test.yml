@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tmux (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes tmux
+
+      - name: Install tmux (macOS)
+        if: runner.os == 'macOS'
+        run: brew install tmux
+
+      # The plugin runs under whatever bash the user has. macOS still ships bash 3.2,
+      # which lacks mapfile, fractional `read -t` and other conveniences, so the suite
+      # is run with /bin/bash on both platforms: bash 5 on Linux, 3.2 on macOS.
+      - name: Show versions
+        run: |
+          tmux -V
+          /bin/bash --version | head -1
+
+      - name: Run tests
+        run: /bin/bash tests/run.sh
